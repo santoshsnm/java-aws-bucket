@@ -23,8 +23,9 @@ public class BucketConfig {
 
     @Bean
     AmazonS3 getAmazonS3Client() {
-		AWSCredentials credentails = new BasicAWSCredentials(awsAccessKey, awsSecretKey);
+	AWSCredentials credentails = new BasicAWSCredentials(awsAccessKey, awsSecretKey);
+		System.out.println(awsAccessKey);
 		return AmazonS3ClientBuilder.standard().withCredentials(new AWSStaticCredentialsProvider(credentails))
-				.withRegion(Regions.US_WEST_2).build();
+				.withRegion(Regions.US_EAST_1).build();
 	}
 }

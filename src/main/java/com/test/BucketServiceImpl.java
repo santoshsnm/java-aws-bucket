@@ -1,17 +1,24 @@
 package com.test;
 
 import java.io.File;
+import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.InputStream;
+import java.net.URI;
+import java.net.URL;
 import java.util.List;
+
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.web.multipart.MultipartFile;
 
-import com.amazonaws.AmazonServiceException;
 import com.amazonaws.services.s3.AmazonS3;
 import com.amazonaws.services.s3.model.Bucket;
+import com.amazonaws.services.s3.model.PutObjectRequest;
+import com.amazonaws.services.s3.model.PutObjectResult;
 import com.amazonaws.services.s3.model.S3Object;
 import com.amazonaws.services.s3.model.S3ObjectInputStream;
 
@@ -40,7 +47,7 @@ public class BucketServiceImpl implements BucketService {
 	public void getObjectFromBucket(String bucketName, String objectName) throws IOException {
 		S3Object s3Object = s3Client.getObject(bucketName, objectName);
 		S3ObjectInputStream inputStream = s3Object.getObjectContent();
-		FileOutputStream fos = new FileOutputStream(new File("opt/test/v1/" + objectName));
+		FileOutputStream fos = new FileOutputStream(new File("../" + objectName));
 		byte[] read_buf = new byte[1024];
 		int read_len = 0;
 		while ((read_len = inputStream.read(read_buf)) > 0) {
@@ -52,16 +59,38 @@ public class BucketServiceImpl implements BucketService {
 
 	@Override
 	public void createBucket(String bucketName) {
-		s3Client.createBucket(bucketName);
+		try {
+			s3Client.createBucket(bucketName);
+		} catch (Exception e) {
+			throw new RuntimeException(e.getMessage());
+		}
+
 	}
 
 	@Override
-	public void putObjectIntoBucket(String bucketName, String objectName, String filePathToUpload) {
+	public String putObjectIntoBucket(String bucketName, MultipartFile file) throws IOException {
+
 		try {
-			s3Client.putObject(bucketName, objectName, new File(filePathToUpload));
-		} catch (AmazonServiceException e) {
-			System.err.println(e.getErrorMessage());
-			System.exit(1);
+			File tempFile = File.createTempFile("upload-", file.getOriginalFilename());
+			file.transferTo(tempFile);
+			URI uri = tempFile.toURI();
+			s3Client.putObject(bucketName, file.getOriginalFilename(), new File(uri));
+
+			return "success";
+		} catch (Exception e) {
+			System.out.println("hii error");
+			return "Error "+e.getMessage();
+			//throw new RuntimeException(e.getLocalizedMessage());
 		}
+
 	}
+
+	@Override
+	public byte[] download(String bucketName, String objectName) throws IOException {
+		S3Object s3Object = s3Client.getObject(bucketName, objectName);
+		S3ObjectInputStream inputStream = s3Object.getObjectContent();
+
+		return inputStream.readAllBytes();
+	}
+
 }
